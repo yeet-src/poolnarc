@@ -1,27 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * minertop — detect crypto-mining traffic, attribute it to processes,
- * and surface "hidden miner" patterns (mining traffic from kernel-
- * thread-named or system-daemon-named processes — classic malware
- * obfuscation).
+ * poolnarc — kernel-side observer for outbound TCP, with per-conn
+ * byte accounting and process attribution. All mining classification
+ * happens in userspace; the kernel just streams events.
  *
- * Kernel side: same surface as bytetop. We track every TCP connection
- * the box opens and count the bytes flowing in each direction. The
- * "is this mining?" decision lives entirely in userspace (port and
- * domain heuristics on the destination), where we can iterate the
- * detection rules without re-compiling the BPF.
+ * Three CO-RE hooks (require CONFIG_DEBUG_INFO_BTF + libbpf reloc):
+ *   tp_btf/inet_sock_set_state   lifecycle (ESTABLISHED, CLOSE)
+ *   fentry/tcp_sendmsg           tx bytes + pid fixup (app ctx)
+ *   fentry/tcp_cleanup_rbuf      rx bytes + pid fixup (app ctx)
  *
- * Three CO-RE hooks (CONFIG_DEBUG_INFO_BTF + libbpf relocations):
- *   tp_btf/inet_sock_set_state  — lifecycle (track at ESTABLISHED,
- *                                 reap at CLOSE)
- *   fentry/tcp_sendmsg          — tx bytes + pid fixup (app context)
- *   fentry/tcp_cleanup_rbuf     — rx bytes + pid fixup (app context)
- *
- * One HASH map (conns, keyed by sock pointer) holds per-conn cumulative
- * byte totals and attribution. One RINGBUF (256 KiB) carries
- * OPEN / BYTES / CLOSE events to userspace. BYTES events emit on a
- * 64 KiB threshold per direction — idle conns produce no events,
- * busy conns produce ~one per 64 KiB transferred.
+ * One HASH map (conns, keyed by sock pointer). One RINGBUF (256 KiB)
+ * carrying OPEN, BYTES (delta every 64 KiB), CLOSE.
  */
 
 #include "vmlinux.h"
@@ -102,10 +91,9 @@ struct {
 
 /* ---- helpers ------------------------------------------------------- */
 
-/* Refuse kernel-thread names as the "real owner" — TCP state
- * transitions fire from softirq, where current is whatever happened
- * to be running. tcp_sendmsg/tcp_cleanup_rbuf in app context will
- * give us the true owner. */
+/* Reject kernel-thread comms as the real owner. TCP state transitions
+ * fire from softirq; we wait for tcp_sendmsg/cleanup_rbuf in app
+ * context to get the true PID. */
 static __always_inline int is_kernel_comm(const char *c) {
     if (c[0] == 's' && c[1] == 'w' && c[2] == 'a' && c[3] == 'p') return 1;  /* swapper */
     if (c[0] == 'k' && c[1] == 'w' && c[2] == 'o' && c[3] == 'r') return 1;  /* kworker */
@@ -202,12 +190,9 @@ int BPF_PROG(on_sendmsg, struct sock *sk, struct msghdr *msg, __u64 size) {
     struct conn_info *ci = bpf_map_lookup_elem(&conns, &key);
     if (!ci) return 0;
 
-    /* opportunistic pid fixup — note this preserves the original comm
-     * if the current is kernel-y (softirq), which is exactly what we
-     * want for "hidden miner" detection: if a process named kworker
-     * appears at ESTABLISHED, we LOCK IT IN as the owner. Real
-     * kernel threads will never reach tcp_sendmsg in app context, so
-     * any non-kernel current here is the real sender. */
+    /* PID fixup. Once FLAG_PID_REAL is set, attribution is locked.
+     * A "kworker" process locked here is the hidden miner -- real
+     * kernel threads never reach this code path in app context. */
     if (!(ci->flags & FLAG_PID_REAL)) {
         char comm[16];
         bpf_get_current_comm(comm, sizeof(comm));

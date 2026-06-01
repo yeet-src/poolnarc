@@ -1,4 +1,4 @@
-/* Pure rendering toolkit for minertop: ANSI escapes, color ramps, a
+/* Pure rendering toolkit for poolnarc: ANSI escapes, color ramps, a
  * braille canvas, address/port/byte formatters, and the mining pool
  * port database with coin-hint heuristics. No application state, no
  * I/O — safe to import anywhere. */

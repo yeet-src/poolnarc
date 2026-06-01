@@ -1,29 +1,19 @@
 #!/usr/bin/env bash
-# simulate_attack.sh — reproduce the cryptominer attack pattern
-# minertop detects, so you can verify the detection works on your box.
+# simulate_attack.sh
 #
-# What this does:
-#   1. Spins up a fake mining-pool listener on a known Stratum port
-#      (TCP/14444, Monero default). The listener just absorbs bytes.
-#   2. Spawns a python process that calls prctl(PR_SET_NAME) to rename
-#      itself to "kworker/u4:2" — a real kernel-thread name pattern.
-#      Real kernel threads CANNOT make outbound TCP connections, so
-#      this is the exact pattern Kinsing and similar malware use to
-#      hide cryptojackers from `ps`.
-#   3. The spoofed process repeatedly connects to the fake pool and
-#      sends Stratum-like JSON-RPC payloads.
+# Reproduces the Kinsing-style attack pattern for testing poolnarc:
+#  1. Fake mining pool listener on 127.0.0.1:14444 (Monero default)
+#  2. Python process renames itself to "kworker/u4:2" via prctl(PR_SET_NAME)
+#  3. The spoofed process pumps Stratum-shaped traffic at the pool
 #
-# Run minertop in another shell first:
+# Run poolnarc first:
 #     yeet run main.js
-# Then run this script. Within ~2 seconds the EGRESS ALERTS panel
-# should turn red with "CRITICAL — pid X (kworker/u4:2) → 127.0.0.1:14444".
+# Then this. Within ~2 seconds the HIDDEN MINER ALERTS panel turns red.
 #
-# To stop: Ctrl-C in this shell. The listener and miner both die.
-#
-# Audit-mode equivalent: run this script in one shell, then in another
+# Audit equivalent:
 #     yeet run main.js -- --audit --duration 15
-# The 15-second scan will catch the attack and the verdict will be
-# CRITICAL.
+#
+# Ctrl-C to stop. Listener and client both die.
 
 set -euo pipefail
 
@@ -82,13 +72,13 @@ sleep 0.3   # give the listener a moment to bind
 
 # ---- foreground: kworker-spoofed client ----------------------------------
 # prctl(PR_SET_NAME, "kworker/u4:2") makes /proc/<pid>/comm read "kworker/u4:2"
-# — the same hiding technique used by the Kinsing malware family. minertop
+# — the same hiding technique used by the Kinsing malware family. poolnarc
 # detects this in BPF because the kernel reports the spoofed comm via
 # bpf_get_current_comm() in tcp_sendmsg, but the process is still
 # observably opening TCP connections — something real kernel threads
 # never do.
 echo "  [client]   starting kworker-spoofed loop..." >&2
-echo "  watch your minertop dashboard now." >&2
+echo "  watch your poolnarc dashboard now." >&2
 echo "  press Ctrl-C here to stop." >&2
 
 python3 -c "
@@ -101,7 +91,7 @@ while True:
         s.connect(('127.0.0.1', $PORT))
         # Fake Stratum 'subscribe' message — the real protocol shape
         # malware would use. Doesn't matter that the listener doesn't
-        # respond; minertop is observing the connection + bytes only.
+        # respond; poolnarc is observing the connection + bytes only.
         for _ in range(30):
             s.send(b'{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"mining.subscribe\",\"params\":[]}\n')
             time.sleep(0.1)

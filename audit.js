@@ -1,22 +1,9 @@
-/* minertop audit mode — one-shot scan + structured report.
+/* audit.js — one-shot scan + report.
  *
- * Why this exists:
- *   The live dashboard (main.js → dashboard.js) is great for "I want to
- *   watch what's happening." But most users don't have a hidden miner
- *   — they want a definitive answer: "did I scan, what did I see,
- *   am I clean." Audit mode runs for a fixed duration, observes
- *   everything, and prints a verdict + the supporting evidence. It's
- *   the report you'd paste in a Slack thread or attach to a ticket.
- *
- * Two output formats:
- *   • human (default) — colored, formatted, with a VERDICT line that
- *     stands out so you can tell at a glance whether your box is OK.
- *   • json (--json flag) — machine-readable, for scripting fleets.
- *
- * This module has zero terminal-positioning escape codes — audit mode
- * writes a stream of lines that scrolls naturally, unlike the live
- * dashboard which repaints in place. That makes the output safe to
- * pipe through `tee`, `less`, or redirect to a file. */
+ * The live dashboard repaints in place. Audit mode writes scrolling
+ * output, safe to pipe or redirect. Two output formats: human
+ * (default, colored) or JSON (--json).
+ */
 
 import {
   auditSnapshot,
@@ -29,21 +16,17 @@ import {
   C_ALERT, C_MINING, C_CRYPTO, C_OK, C_DIM, C_NORMAL,
 } from "./render.js";
 
-/* Tick the state model at the same cadence the dashboard would.
- * advance() is what compacts per-tick byte deltas into the rate
- * history; without it, audit reports never see "current bandwidth"
- * derived numbers. Using setInterval keeps this loop running purely
- * for the side-effect of state reaping during the scan window. */
+/* Drive state.advance() at dashboard cadence so audit reports get
+ * the same rate-history compaction. */
 function startAdvanceTicker(intervalMs) {
   return setInterval(() => { try { advance(); } catch (_) {} }, intervalMs);
 }
 
-/* Banner — clean ASCII so it doesn't get garbled when copy-pasted
- * into a non-Unicode terminal or chat channel. */
+/* Plain ASCII so it survives non-Unicode terminals and chat paste. */
 function banner() {
   const lines = [
     "════════════════════════════════════════════════════════════════",
-    "  minertop audit · behavioral hidden-cryptominer scan",
+    "  poolnarc audit · behavioral hidden-cryptominer scan",
     "════════════════════════════════════════════════════════════════",
   ];
   return lines.join("\n");
@@ -54,8 +37,7 @@ function timestamp() {
   return d.toISOString().replace("T", " ").replace(/\.\d+Z$/, " UTC");
 }
 
-/* Verdict line: the headline result. Coloring chosen for fast visual
- * triage even in a sea of stdout. CLEAN is green, the others escalate. */
+/* Verdict line. CLEAN is green, the rest escalate visually. */
 function verdictLine(verdict, snapshot) {
   switch (verdict) {
     case "CRITICAL":
@@ -259,7 +241,7 @@ export function printJSONReport(snapshot) {
    * numeric string keys, which is ugly and not what scripting consumers
    * want. Replace with proper formatted address strings. */
   const safe = {
-    minertop_audit_version: 1,
+    poolnarc_audit_version: 1,
     scan_started_at: new Date(snapshot.started_at).toISOString(),
     scan_duration_ms: snapshot.scan_duration_ms,
     verdict: snapshot.verdict,
@@ -342,17 +324,13 @@ export function printJSONReport(snapshot) {
  * Runner.                                                                *
  * ---------------------------------------------------------------------- *
  *
- * runAudit:
- *   durationMs:  how long to observe before printing the report
- *   asJSON:      if true, print JSON; else human-readable
- *   write:       function(str) — pluggable for testing; defaults to
- *                tty.write or process.stdout.write
- *   onComplete:  optional callback fired after report is printed.
- *                The default exits the process; pass () => {} from
- *                tests to keep the runtime alive.
+ * opts:
+ *   durationMs   scan window length
+ *   asJSON       JSON output if true, human if false
+ *   write        injection for testing; defaults to tty or stdout
+ *   onComplete   optional post-report callback
  *
- * Returns the snapshot object, so callers can also inspect it
- * programmatically (in addition to whatever we print). */
+ * Returns the snapshot so callers can inspect it programmatically. */
 export function runAudit(opts) {
   opts = opts || {};
   const durationMs = opts.durationMs || 60_000;

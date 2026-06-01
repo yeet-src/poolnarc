@@ -1,4 +1,4 @@
-# minertop Makefile — compiles the BPF object to bin/minertop.bpf.o.
+# poolnarc Makefile — compiles the BPF object to bin/poolnarc.bpf.o.
 # Mirrors the airtop / flowtop / blktop / bytetop layout.
 
 BPF_CLANG ?= clang
@@ -9,8 +9,8 @@ ARCH := $(shell uname -m | sed 's/x86_64/x86/; s/aarch64/arm64/')
 INCLUDE_DIR := include
 BIN_DIR     := bin
 VMLINUX     := $(INCLUDE_DIR)/vmlinux.h
-BPF_SRC     := minertop.bpf.c
-BPF_OBJ     := $(BIN_DIR)/minertop.bpf.o
+BPF_SRC     := poolnarc.bpf.c
+BPF_OBJ     := $(BIN_DIR)/poolnarc.bpf.o
 
 .PHONY: all clean distclean
 all: $(BPF_OBJ)

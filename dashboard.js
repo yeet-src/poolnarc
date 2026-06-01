@@ -1,4 +1,4 @@
-/* Dashboard composition for minertop. Same layout idioms as
+/* Dashboard composition for poolnarc. Same layout idioms as
  * xtop / blktop / flowtop / bytetop / airtop, with mining-detection-
  * specific panels.
  *
@@ -256,7 +256,7 @@ export function renderDashboard(C, R) {
   if (C < MIN_COLS || R < MIN_ROWS) return smallTerm(C, R);
 
   const rows = [];
-  rows.push(topRule(C, "MINERTOP · crypto-mining traffic detector"));
+  rows.push(topRule(C, "POOLNARC · crypto-mining traffic detector"));
   rows.push(headerLine(C));
   rows.push("");
 
@@ -329,7 +329,7 @@ export function clearScreen() { return "\x1b[H\x1b[2J"; }
 
 function smallTerm(C, R) {
   const lines = [
-    `minertop: terminal too small`,
+    `poolnarc: terminal too small`,
     `need ≥ ${MIN_COLS}×${MIN_ROWS}`,
     `have ${C}×${R}`,
   ];

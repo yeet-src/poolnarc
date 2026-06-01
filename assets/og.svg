@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0c1016"/>
+      <stop offset="1" stop-color="#070a0e"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <rect width="1280" height="6" fill="#FF5C00"/>
+
+  <!-- wordmark -->
+  <text x="72" y="150" font-family="Menlo, monospace" font-size="84" font-weight="bold" fill="#e6edf3">poolnarc</text>
+  <text x="470" y="150" font-family="Menlo, monospace" font-size="84" font-weight="bold" fill="#FF5C00">_</text>
+
+  <!-- tagline -->
+  <text x="74" y="208" font-family="Menlo, monospace" font-size="29" fill="#9aa7b2">Behavioral detector for hidden cryptominers on Linux</text>
+
+  <!-- terminal card -->
+  <rect x="72" y="262" width="1136" height="244" rx="14" fill="#0f141b" stroke="#222a33" stroke-width="1.5"/>
+  <circle cx="102" cy="294" r="6.5" fill="#f85149"/>
+  <circle cx="124" cy="294" r="6.5" fill="#e3b341"/>
+  <circle cx="146" cy="294" r="6.5" fill="#3fb950"/>
+
+  <text xml:space="preserve" font-family="Menlo, monospace" font-size="26">
+    <tspan x="102" y="362" fill="#3fb950">$</tspan><tspan fill="#7d8590"> yeet run github:yeet-src/poolnarc -- --audit</tspan>
+  </text>
+  <text xml:space="preserve" font-family="Menlo, monospace" font-size="26" font-weight="bold">
+    <tspan x="102" y="414" fill="#f85149">● CRITICAL</tspan><tspan fill="#c9d1d9" font-weight="normal">   kworker/u4:2   </tspan><tspan fill="#7d8590">→</tspan><tspan fill="#e3b341">   Ethereum Stratum</tspan><tspan fill="#7d8590" font-weight="normal">   [spoofed]</tspan>
+  </text>
+  <text xml:space="preserve" font-family="Menlo, monospace" font-size="26" font-weight="bold">
+    <tspan x="102" y="466" fill="#ff6b61">VERDICT: hidden cryptominer detected</tspan>
+  </text>
+
+  <!-- footer -->
+  <text xml:space="preserve" x="74" y="572" font-family="Menlo, monospace" font-size="24"><tspan fill="#FF5C00">built with yeet.cx</tspan><tspan fill="#4a5560">   ·   </tspan><tspan fill="#7d8590">eBPF CO-RE</tspan><tspan fill="#4a5560">   ·   </tspan><tspan fill="#7d8590">no agent, no cloud</tspan></text>
+</svg>

@@ -1,21 +1,16 @@
-/* minertop — main entry point.
+/* main.js — entry point.
  *
  * Two modes:
- *   • live (default)            — yeet run main.js
- *     Streams events to the interactive dashboard. Repaints every
- *     200 ms. Runs until Ctrl-C.
- *   • audit (one-shot scan)     — yeet run main.js -- --audit
- *     Watches everything for N seconds (default 60, set --duration N),
- *     then prints a structured report and exits.
- *     Add --json for machine-readable output.
+ *   live (default)        yeet run main.js
+ *   audit                 yeet run main.js -- --audit
+ *                         add --duration N (seconds), --json
  *
- * Both modes use the same kernel-side BPF surface (three CO-RE hooks)
- * and the same state model. The only differences are: audit mode
- * doesn't draw the dashboard, doesn't run the render loop, and exits
- * once its window closes. */
+ * Same BPF surface and state model. Audit doesn't draw, doesn't
+ * repaint, exits when its window closes.
+ */
 
 import { RingBuf } from "yeet:bpf";
-import bpf from "./bin/minertop.bpf.o";
+import bpf from "./bin/poolnarc.bpf.o";
 
 import { onEvent, advance, TICK_MS } from "./state.js";
 import { renderDashboard, clearScreen } from "./dashboard.js";
@@ -44,7 +39,7 @@ const tty = globalThis.tty;
 /* The dashboard needs a live tty. Audit mode tolerates its absence —
  * its output is plain stdout-friendly text. */
 if (!AUDIT_MODE && !tty) {
-  console.error("minertop: no tty available (yeet didn't expose globalThis.tty)");
+  console.error("poolnarc: no tty available (yeet didn't expose globalThis.tty)");
   throw new Error("missing tty");
 }
 
@@ -80,7 +75,7 @@ async function main() {
 
   await new RingBuf(control, "events").subscribe(
     (evt) => onEvent(evt.conn_evt ?? evt),
-    (err) => console.error("minertop ringbuf error:", err?.message ?? err),
+    (err) => console.error("poolnarc ringbuf error:", err?.message ?? err),
   );
 
   if (AUDIT_MODE) {

@@ -1,4 +1,4 @@
-/* Application state + event ingest for minertop.
+/* Application state + event ingest for poolnarc.
  *
  * BPF emits three event kinds on one ringbuf:
  *   kind 0  OPEN   new connection observed
@@ -72,12 +72,10 @@ const alerts = new Map();
  * "family:addr-hex:port". Carries the inferred coin/proto. */
 const pools = new Map();
 
-/* allDests: every destination observed during this scan, regardless of
- * classification. Used only by audit mode (--audit) to compute "I saw
- * N distinct destinations, M of them were mining pools". Has no TTL —
- * audit windows are short (60s default) and we want a complete count.
- * The live dashboard never reads this map, so memory cost is paid
- * only when the user opts into audit mode. */
+/* allDests: every destination seen during the scan, regardless of
+ * classification. Used by audit mode to count "I saw N destinations,
+ * M were mining." No TTL since audit windows are short. The live
+ * dashboard doesn't read this map. */
 const allDests = new Map();
 
 function getAllDest(family, daddr, dport, classification) {
@@ -474,32 +472,12 @@ export function counts() {
 /* Audit mode accessor                                                  */
 /* ==================================================================== */
 
-/* Returns a structured snapshot of everything the audit report needs.
- * Pure data shape — no formatting decisions live here. audit.js owns
- * the human and JSON rendering.
- *
- * Shape:
- *   {
- *     scan_duration_ms: number,
- *     started_at: number (epoch ms),
- *     total_events: number,
- *     total_opens: number,
- *     total_closes: number,
- *     total_bytes_tx: number, total_bytes_rx: number,
- *     mining_bytes_tx: number, mining_bytes_rx: number,
- *     distinct_destinations: number,
- *     mining_pool_hits: number,       // distinct mining-classified destinations
- *     stratum_likely_hits: number,    // distinct stratum-likely destinations
- *     crypto_p2p_hits: number,
- *     miners: [ {pid, comm, classification, bytes_tx, bytes_rx, mimicry, ...} ],
- *     pools: [ {addr, port, classification, info, bytes_tx, bytes_rx, ...} ],
- *     alerts: [ {pid, comm, level, classification, pool_addr, pool_port, ...} ],
- *     top_destinations: [ {addr, port, family, classification, bytes_tx, bytes_rx} ],
- *     critical_alerts: number,
- *     suspicious_alerts: number,
- *     verdict: "CRITICAL" | "MINING" | "SUSPICIOUS" | "CLEAN",
- *   }
- */
+/* Structured snapshot for audit reports. Pure data. audit.js handles
+ * formatting. Fields: scan_duration_ms, total_events, total_opens,
+ * total_closes, total_bytes_tx/rx, mining_bytes_tx/rx,
+ * distinct_destinations, {mining_pool,stratum_likely,crypto_p2p}_hits,
+ * miners[], pools[], alerts[], top_destinations[],
+ * critical_alerts, suspicious_alerts, verdict. */
 export function auditSnapshot() {
   const now = Date.now();
 

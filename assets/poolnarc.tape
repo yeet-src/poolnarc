@@ -1,4 +1,4 @@
-Output minertop.gif
+Output poolnarc.gif
 
 Set FontSize 14
 Set Width 1200
