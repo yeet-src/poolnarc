@@ -1,3 +1,5 @@
+<!-- yeet:user-friendly-title: Detect malicious network activity -->
+
 # poolnarc
 
 <p align="center">
