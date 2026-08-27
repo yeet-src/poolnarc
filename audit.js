@@ -335,9 +335,13 @@ export function runAudit(opts) {
   opts = opts || {};
   const durationMs = opts.durationMs || 60_000;
   const asJSON     = !!opts.asJSON;
+  /* The runtime has no `process`, so the no-tty path uses console.log,
+   * which is what makes --audit work when piped, redirected, or run over
+   * SSH without a terminal. console.log appends its own newline, so strip
+   * one trailing newline to keep the output byte-identical to the tty path. */
   const write      = opts.write || ((s) => {
     if (globalThis.tty?.write) globalThis.tty.write(s);
-    else process.stdout.write(s);
+    else console.log(s.endsWith("\n") ? s.slice(0, -1) : s);
   });
   const onComplete = opts.onComplete;
 
